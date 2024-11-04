@@ -1,0 +1,11 @@
+** Receive images from Casio WQV-1/2 watch via an IR adapter **
+
+Have tested it on WQV-2, it should work on other models as well. Based on the reverse engineered
+spec by Marcus Gröber https://www.mgroeber.de/misc/wqvprot.htm. You'll need a serial USB IR adapter,
+I used this one https://irdroid.eu/product/irdroid-usb-irda-transceiver-2/
+
+How to: run the program, then on your watch go to "IR Comm", then "Others" and "Send". Select the image
+to send and point to the IR adapter. In this mode, the watch will act as a computer that uploads images, 
+so the receiver actually acts as another watch that receives images.
+
+P.S. I'm not a Rust programmer, so the code is probably not very good.
