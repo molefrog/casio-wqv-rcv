@@ -203,7 +203,7 @@ impl ProtocolState {
             return Err("checksum check failed");
         }
 
-        let data = unescp_data(&unesc_frame[2..unesc_frame.len() - 2]);
+        let data = unesc_frame[2..unesc_frame.len() - 2].to_vec();
 
         // device assigns us an address
         if cmd == 0x93 && data.len() >= 5 {
@@ -266,8 +266,13 @@ struct ImageBlob {
         unsigned char pixel[120*120/2]; // one nibble per pixel
     };
 */
-fn parse_image_blob(data: &[u8]) -> ImageBlob {
-    assert_eq!(data.len(), 7228, "Data length must be exactly 7228 bytes");
+fn parse_image_blob(data: &[u8]) -> Result<ImageBlob, String> {
+    if data.len() != 7229 {
+        return Err(format!(
+            "Image data must be exactly 7229 bytes, but {} bytes given",
+            data.len()
+        ));
+    }
 
     let name =
         String::from_utf8(data[..24].to_vec()).expect("Invalid UTF-8 sequence in image name");
@@ -280,11 +285,11 @@ fn parse_image_blob(data: &[u8]) -> ImageBlob {
         .unwrap()
         .and_utc();
 
-    ImageBlob {
+    Ok(ImageBlob {
         name: name_trimmed,
         date,
-        img: data[30..].to_vec(),
-    }
+        img: data[29..].to_vec(),
+    })
 }
 
 fn main() {
@@ -297,7 +302,7 @@ fn main() {
 
     let usbir = ports
         .iter()
-        .find(|x| x.port_name.starts_with("/dev/cu.usbserial"))
+        .find(|x| x.port_name.contains("usbserial"))
         .expect("Can't locate usb serial port");
 
     println!("Found USB IR {}", usbir.port_name);
@@ -347,12 +352,15 @@ fn main() {
     let data = proto.read_data_transmission().unwrap();
     println!("[X] Data transmission complete, got {} bytes", data.len());
 
-    assert_eq!(data.len(), 7228, "Data length must be exactly 7228 bytes");
-
-    let blob = parse_image_blob(&data);
+    let blob = parse_image_blob(&data).unwrap();
     println!("name = {}", blob.name);
     println!("date = {}", blob.date);
-    println!("{:02X?}", blob.img);
+    println!("{:02X?}", data);
+    assert_eq!(
+        blob.img.len(),
+        7200,
+        "Image data length must be exactly 7200 bytes"
+    );
 
     // end!
     proto.send_frame(Addr::Auto, 0x42, &[0x06]).unwrap();
